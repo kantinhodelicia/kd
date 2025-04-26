@@ -333,23 +333,32 @@ export function MenuProvider({ children }: { children: ReactNode }) {
 
   // Load data from localStorage on component mount
   useEffect(() => {
-    const storedPizzas = localStorage.getItem("kantinho-pizzas")
-    const storedZonas = localStorage.getItem("kantinho-zonas")
-    const storedBebidas = localStorage.getItem("kantinho-bebidas")
-    const storedExtras = localStorage.getItem("kantinho-extras")
+    // Verifica se está no ambiente do navegador antes de acessar localStorage
+    if (typeof window !== 'undefined') {
+      const storedPizzas = localStorage.getItem("kantinho-pizzas")
+      const storedZonas = localStorage.getItem("kantinho-zonas") 
+      const storedBebidas = localStorage.getItem("kantinho-bebidas")
+      const storedExtras = localStorage.getItem("kantinho-extras")
 
-    if (storedPizzas) setPizzas(JSON.parse(storedPizzas))
-    if (storedZonas) setZonas(JSON.parse(storedZonas))
-    if (storedBebidas) setBebidas(JSON.parse(storedBebidas))
-    if (storedExtras) setExtras(JSON.parse(storedExtras))
+      if (storedPizzas) setPizzas(JSON.parse(storedPizzas))
+      if (storedZonas) setZonas(JSON.parse(storedZonas))
+      if (storedBebidas) setBebidas(JSON.parse(storedBebidas))
+      if (storedExtras) setExtras(JSON.parse(storedExtras))
+
+      // Remover zona específica (movido para dentro do useEffect)
+      localStorage.removeItem('kantinho-zonas');
+    }
   }, [])
 
   // Save data to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem("kantinho-pizzas", JSON.stringify(pizzas))
-    localStorage.setItem("kantinho-zonas", JSON.stringify(zonas))
-    localStorage.setItem("kantinho-bebidas", JSON.stringify(bebidas))
-    localStorage.setItem("kantinho-extras", JSON.stringify(extras))
+    // Verifica se está no ambiente do navegador antes de acessar localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("kantinho-pizzas", JSON.stringify(pizzas))
+      localStorage.setItem("kantinho-zonas", JSON.stringify(zonas))
+      localStorage.setItem("kantinho-bebidas", JSON.stringify(bebidas))
+      localStorage.setItem("kantinho-extras", JSON.stringify(extras))
+    }
   }, [pizzas, zonas, bebidas, extras])
 
   // Pizza CRUD operations
@@ -419,9 +428,6 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   const deleteExtra = (id: string) => {
     setExtras((prev) => prev.filter((item) => item.id !== id))
   }
-
-  // Adicione esta linha logo após a declaração do MenuProvider
-  localStorage.removeItem('kantinho-zonas');
 
   return (
     <MenuContext.Provider
