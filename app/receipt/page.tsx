@@ -9,6 +9,7 @@ import { useSales } from "@/context/sales-context"
 import { useAuth } from "@/context/auth-context"
 import { AuthGuard } from "@/components/auth-guard"
 import { v4 as uuidv4 } from "uuid"
+import { destroyCookie } from "nookies"
 
 export default function ReceiptPage() {
   const [isOrderFinalized, setIsOrderFinalized] = useState(false)
@@ -167,7 +168,8 @@ export default function ReceiptPage() {
     setOrderNumber(documentNumber)
     setIsOrderFinalized(true)
     clearCart()
-    localStorage.removeItem('kantinho-extras');
+    // Removendo o cookie em vez de usar localStorage
+    destroyCookie(null, 'kantinho-extras', { path: '/' })
   }
 
   const handleCustomerInfoChange = (info: Partial<typeof customerInfo>) => {

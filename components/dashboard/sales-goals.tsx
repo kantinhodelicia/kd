@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import type React from "react"
+import { parseCookies, setCookie } from "nookies"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,17 +22,25 @@ export function SalesGoals() {
     monthlyOrders: 200,
   })
 
-  // Carregar metas do localStorage
+  // Carregar metas dos cookies ao iniciar
   useEffect(() => {
-    const savedGoals = localStorage.getItem("kantinho-sales-goals")
+    const cookies = parseCookies()
+    const savedGoals = cookies["kantinho-sales-goals"]
     if (savedGoals) {
       setGoals(JSON.parse(savedGoals))
     }
   }, [])
 
-  // Salvar metas no localStorage quando mudar
+  // Salvar metas nos cookies quando mudar
   useEffect(() => {
-    localStorage.setItem("kantinho-sales-goals", JSON.stringify(goals))
+    try {
+      setCookie(null, "kantinho-sales-goals", JSON.stringify(goals), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+    } catch (error) {
+      console.error("Erro ao salvar cookies:", error)
+    }
   }, [goals])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

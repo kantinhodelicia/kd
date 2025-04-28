@@ -1,6 +1,7 @@
 "use client"
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
+import { parseCookies, setCookie, destroyCookie } from "nookies"
 
 export type User = {
   id: string
@@ -34,7 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Verificar se o usuário está logado ao carregar a página
   useEffect(() => {
-    const storedUser = localStorage.getItem("kantinho-user")
+    const cookies = parseCookies()
+    const storedUser = cookies["kantinho-user"]
     if (storedUser) {
       setUser(JSON.parse(storedUser))
     }
@@ -49,15 +51,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Simulando uma chamada de API
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Verificar se o usuário existe no localStorage
-      const users = JSON.parse(localStorage.getItem("kantinho-users") || "[]")
+      // Verificar se o usuário existe nos cookies
+      const cookies = parseCookies()
+      const users = JSON.parse(cookies["kantinho-users"] || "[]")
       const foundUser = users.find((u: any) => u.email === email && u.password === password)
 
       if (foundUser) {
         // Remover a senha antes de armazenar no estado
         const { password: _, ...userWithoutPassword } = foundUser
         setUser(userWithoutPassword)
-        localStorage.setItem("kantinho-user", JSON.stringify(userWithoutPassword))
+        setCookie(null, "kantinho-user", JSON.stringify(userWithoutPassword), {
+          maxAge: 30 * 24 * 60 * 60, // 30 dias
+          path: "/",
+        })
         setIsLoading(false)
         return true
       }
@@ -80,7 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Verificar se o email já está em uso
-      const users = JSON.parse(localStorage.getItem("kantinho-users") || "[]")
+      const cookies = parseCookies()
+      const users = JSON.parse(cookies["kantinho-users"] || "[]")
       const userExists = users.some((u: any) => u.email === email)
 
       if (userExists) {
@@ -99,14 +106,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         orderHistory: [],
       }
 
-      // Salvar no localStorage
+      // Salvar nos cookies
       users.push(newUser)
-      localStorage.setItem("kantinho-users", JSON.stringify(users))
+      setCookie(null, "kantinho-users", JSON.stringify(users), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
 
       // Fazer login automaticamente
       const { password: _, ...userWithoutPassword } = newUser
-      setUser(userWithoutPassword)
-      localStorage.setItem("kantinho-user", JSON.stringify(userWithoutPassword))
+      setUser(userWithoutPassword as User)
+      setCookie(null, "kantinho-user", JSON.stringify(userWithoutPassword), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
 
       setIsLoading(false)
       return true
@@ -120,36 +133,111 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Função de logout
   const logout = () => {
     setUser(null)
-    localStorage.removeItem("kantinho-user")
+    destroyCookie(null, "kantinho-user", { path: "/" })
     router.push("/login")
   }
 
-  // Função para atualizar o perfil do usuário
-  const updateUserProfile = async (data: Partial<User>): Promise<boolean> => {
-    if (!user) return false
-
+  const updateUserProfile = async (updates: Partial<User>) => {
     try {
-      // Simulando uma chamada de API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Atualizar usuário no estado e localStorage
-      const updatedUser = { ...user, ...data }
+      // Atualizar usuário no estado e cookies
+      const updatedUser = { ...user!, ...updates, updatedAt: new Date().toISOString() }
       setUser(updatedUser)
-      localStorage.setItem("kantinho-user", JSON.stringify(updatedUser))
-
-      // Atualizar usuário na lista de usuários
-      const users = JSON.parse(localStorage.getItem("kantinho-users") || "[]")
-      const updatedUsers = users.map((u: any) => {
-        if (u.id === user.id) {
-          return { ...u, ...data, password: u.password } // Manter a senha original
-        }
-        return u
+      setCookie(null, "kantinho-user", JSON.stringify(updatedUser), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
       })
-      localStorage.setItem("kantinho-users", JSON.stringify(updatedUsers))
+
+      // Atualizar na lista de usuários
+      const cookies = parseCookies()
+      const users = JSON.parse(cookies["kantinho-users"] || "[]")
+      const updatedUsers = users.map((u: any) =>
+        u.id === user?.id
+          ? { ...u, ...updates, updatedAt: new Date().toISOString() }
+          : u
+      )
+      setCookie(null, "kantinho-users", JSON.stringify(updatedUsers), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+    } catch (error) {
+      console.error("Erro ao atualizar perfil:", error)
+      throw error
+    }
+  }
+
+  const updateUserEmail = async (password: string, newEmail: string): Promise<boolean> => {
+    try {
+      // Verificar a senha atual
+      const cookies = parseCookies()
+      const users = JSON.parse(cookies["kantinho-users"] || "[]")
+      const currentUser = users.find((u: any) => u.id === user?.id)
+
+      if (!currentUser || currentUser.password !== password) {
+        return false
+      }
+
+      // Verificar se o novo email já está em uso
+      if (users.some((u: any) => u.id !== user?.id && u.email === newEmail)) {
+        return false
+      }
+
+      // Atualizar email
+      const updatedUser = { ...user!, email: newEmail, updatedAt: new Date().toISOString() }
+      setUser(updatedUser)
+      setCookie(null, "kantinho-user", JSON.stringify(updatedUser), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+
+      const updatedUsers = users.map((u: any) =>
+        u.id === user?.id
+          ? { ...u, email: newEmail, updatedAt: new Date().toISOString() }
+          : u
+      )
+      setCookie(null, "kantinho-users", JSON.stringify(updatedUsers), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
 
       return true
     } catch (error) {
-      console.error("Erro ao atualizar perfil:", error)
+      console.error("Erro ao atualizar email:", error)
+      return false
+    }
+  }
+
+  const updateUserPassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    try {
+      // Verificar a senha atual
+      const cookies = parseCookies()
+      const users = JSON.parse(cookies["kantinho-users"] || "[]")
+      const currentUser = users.find((u: any) => u.id === user?.id)
+
+      if (!currentUser || currentUser.password !== currentPassword) {
+        return false
+      }
+
+      // Atualizar senha
+      const updatedUser = { ...user!, updatedAt: new Date().toISOString() }
+      setUser(updatedUser)
+      setCookie(null, "kantinho-user", JSON.stringify(updatedUser), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+
+      const updatedUsers = users.map((u: any) =>
+        u.id === user?.id
+          ? { ...u, password: newPassword, updatedAt: new Date().toISOString() }
+          : u
+      )
+      setCookie(null, "kantinho-users", JSON.stringify(updatedUsers), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+
+      return true
+    } catch (error) {
+      console.error("Erro ao atualizar senha:", error)
       return false
     }
   }
@@ -164,17 +252,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setUser(updatedUser)
-    localStorage.setItem("kantinho-user", JSON.stringify(updatedUser))
+    setCookie(null, "kantinho-user", JSON.stringify(updatedUser), {
+      maxAge: 30 * 24 * 60 * 60, // 30 dias
+      path: "/",
+    })
 
     // Atualizar usuário na lista de usuários
-    const users = JSON.parse(localStorage.getItem("kantinho-users") || "[]")
+    const cookies = parseCookies()
+    const users = JSON.parse(cookies["kantinho-users"] || "[]")
     const updatedUsers = users.map((u: any) => {
       if (u.id === user.id) {
         return { ...u, loyaltyPoints: u.loyaltyPoints + points }
       }
       return u
     })
-    localStorage.setItem("kantinho-users", JSON.stringify(updatedUsers))
+    setCookie(null, "kantinho-users", JSON.stringify(updatedUsers), {
+      maxAge: 30 * 24 * 60 * 60, // 30 dias
+      path: "/",
+    })
   }
 
   // Função para resgatar pontos de fidelidade
@@ -187,17 +282,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setUser(updatedUser)
-    localStorage.setItem("kantinho-user", JSON.stringify(updatedUser))
+    setCookie(null, "kantinho-user", JSON.stringify(updatedUser), {
+      maxAge: 30 * 24 * 60 * 60, // 30 dias
+      path: "/",
+    })
 
     // Atualizar usuário na lista de usuários
-    const users = JSON.parse(localStorage.getItem("kantinho-users") || "[]")
+    const cookies = parseCookies()
+    const users = JSON.parse(cookies["kantinho-users"] || "[]")
     const updatedUsers = users.map((u: any) => {
       if (u.id === user.id) {
         return { ...u, loyaltyPoints: u.loyaltyPoints - points }
       }
       return u
     })
-    localStorage.setItem("kantinho-users", JSON.stringify(updatedUsers))
+    setCookie(null, "kantinho-users", JSON.stringify(updatedUsers), {
+      maxAge: 30 * 24 * 60 * 60, // 30 dias
+      path: "/",
+    })
 
     return true
   }
@@ -211,7 +313,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         isAuthenticated: !!user,
-        updateUserProfile,
+        updateUserProfile: async (updates: Partial<User>): Promise<boolean> => {
+          try {
+            await updateUserProfile(updates);
+            return true;
+          } catch (error) {
+            console.error("Error updating user profile:", error);
+            return false;
+          }
+        },
         addLoyaltyPoints,
         redeemLoyaltyPoints,
       }}

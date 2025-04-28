@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import type React from "react"
 
 import Link from "next/link"
+import { parseCookies, setCookie } from "nookies"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -48,9 +49,10 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState("")
 
-  // Carregar configurações do localStorage
+  // Carregar configurações dos cookies
   useEffect(() => {
-    const savedSettings = localStorage.getItem("kantinho-settings")
+    const cookies = parseCookies()
+    const savedSettings = cookies["kantinho-settings"]
     if (savedSettings) {
       setSettings(JSON.parse(savedSettings))
     }
@@ -74,8 +76,11 @@ export default function SettingsPage() {
   const handleSave = () => {
     setIsSaving(true)
 
-    // Salvar no localStorage
-    localStorage.setItem("kantinho-settings", JSON.stringify(settings))
+    // Salvar nos cookies
+    setCookie(null, "kantinho-settings", JSON.stringify(settings), {
+      maxAge: 30 * 24 * 60 * 60, // 30 dias
+      path: "/",
+    })
 
     // Simular um delay para feedback visual
     setTimeout(() => {

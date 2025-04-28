@@ -1,5 +1,6 @@
 "use client"
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { parseCookies, setCookie, destroyCookie } from "nookies"
 
 export type PizzaSize = "familiar" | "medio" | "peq"
 
@@ -331,14 +332,22 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   const [bebidas, setBebidas] = useState<BebidaItem[]>(initialBebidas)
   const [extras, setExtras] = useState<ExtraItem[]>(initialExtras)
 
-  // Load data from localStorage on component mount
+  // Load data from cookies on component mount
   useEffect(() => {
+<<<<<<< HEAD
     // Verifica se está no ambiente do navegador antes de acessar localStorage
     if (typeof window !== 'undefined') {
       const storedPizzas = localStorage.getItem("kantinho-pizzas")
       const storedZonas = localStorage.getItem("kantinho-zonas") 
       const storedBebidas = localStorage.getItem("kantinho-bebidas")
       const storedExtras = localStorage.getItem("kantinho-extras")
+=======
+    const cookies = parseCookies()
+    const storedPizzas = cookies["kantinho-pizzas"]
+    const storedZonas = cookies["kantinho-zonas"]
+    const storedBebidas = cookies["kantinho-bebidas"]
+    const storedExtras = cookies["kantinho-extras"]
+>>>>>>> f5ca1c6 (Atualização do projeto com melhorias e correções)
 
       if (storedPizzas) setPizzas(JSON.parse(storedPizzas))
       if (storedZonas) setZonas(JSON.parse(storedZonas))
@@ -350,14 +359,37 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Save data to localStorage whenever it changes
+  // Save data to cookies whenever it changes
   useEffect(() => {
+<<<<<<< HEAD
     // Verifica se está no ambiente do navegador antes de acessar localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem("kantinho-pizzas", JSON.stringify(pizzas))
       localStorage.setItem("kantinho-zonas", JSON.stringify(zonas))
       localStorage.setItem("kantinho-bebidas", JSON.stringify(bebidas))
       localStorage.setItem("kantinho-extras", JSON.stringify(extras))
+=======
+    // Usamos um try/catch para evitar erros durante a renderização no servidor
+    try {
+      setCookie(null, "kantinho-pizzas", JSON.stringify(pizzas), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+      setCookie(null, "kantinho-zonas", JSON.stringify(zonas), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+      setCookie(null, "kantinho-bebidas", JSON.stringify(bebidas), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+      setCookie(null, "kantinho-extras", JSON.stringify(extras), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+    } catch (error) {
+      console.error("Erro ao salvar cookies:", error)
+>>>>>>> f5ca1c6 (Atualização do projeto com melhorias e correções)
     }
   }, [pizzas, zonas, bebidas, extras])
 
@@ -429,6 +461,12 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     setExtras((prev) => prev.filter((item) => item.id !== id))
   }
 
+<<<<<<< HEAD
+=======
+  // Remova a linha que usa localStorage diretamente
+  // O localStorage não está disponível no lado do servidor
+
+>>>>>>> f5ca1c6 (Atualização do projeto com melhorias e correções)
   return (
     <MenuContext.Provider
       value={{

@@ -1,5 +1,6 @@
 "use client"
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { parseCookies, setCookie, destroyCookie } from "nookies"
 import { v4 as uuidv4 } from "uuid"
 
 export type OrderStatus = "pending" | "completed" | "cancelled"
@@ -56,17 +57,26 @@ const SalesContext = createContext<SalesContextType | undefined>(undefined)
 export function SalesProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([])
 
-  // Carregar dados do localStorage ao iniciar
+  // Carregar dados dos cookies ao iniciar
   useEffect(() => {
-    const storedOrders = localStorage.getItem("kantinho-orders")
+    const cookies = parseCookies()
+    const storedOrders = cookies["kantinho-orders"]
     if (storedOrders) {
       setOrders(JSON.parse(storedOrders))
     }
   }, [])
 
-  // Salvar dados no localStorage quando mudar
+  // Salvar dados nos cookies quando mudar
   useEffect(() => {
-    localStorage.setItem("kantinho-orders", JSON.stringify(orders))
+    // Usamos um try/catch para evitar erros durante a renderização no servidor
+    try {
+      setCookie(null, "kantinho-orders", JSON.stringify(orders), {
+        maxAge: 30 * 24 * 60 * 60, // 30 dias
+        path: "/",
+      })
+    } catch (error) {
+      console.error("Erro ao salvar cookies:", error)
+    }
   }, [orders])
 
   const addOrder = (order: Omit<Order, "id">) => {
